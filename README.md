@@ -3,6 +3,12 @@
 A **Fusion 360 Add-in** that generates rectangular array patterns of shapes on various surface types. Designed for creating ventilation grilles, decorative panels, knurling textures, and other repetitive geometric patterns directly inside Fusion 360.
 
 **Author:** Kamil Sokalski
+**Original project:** https://modelowanie3d.org/patternmaker/
+
+### Changes from original
+1. Translated Polish to English
+2. Security check of code
+3. Set `DEBUG` to `False`
 
 ---
 
@@ -59,31 +65,17 @@ A **Fusion 360 Add-in** that generates rectangular array patterns of shapes on v
 
 1. **Download** or clone this repository.
 
-2. **Locate** Fusion 360's Add-Ins folder:
-   - **Windows:** `%APPDATA%\Autodesk\Autodesk Fusion 360\API\AddIns\`
-   - **macOS:** `~/Library/Application Support/Autodesk/Autodesk Fusion 360/API/AddIns/`
+2. **Launch** Fusion 360.
 
-3. **Copy** the entire `PM2` folder into the Add-Ins directory. The folder structure should look like:
-   ```
-   AddIns/
-     PM2/
-       PatternMaker.py
-       PatternMaker.manifest
-       config.py
-       resources/
-       ...
-   ```
+3. Open Utilities > Add-Inns > Scripts and Add-ins > + at the top > Script or Add-In from device
 
-4. **Launch** Fusion 360.
+4. Choose the directory that you cloned pattern maker add-in
 
-5. Open the **Scripts and Add-Ins** dialog:
-   - Go to **Utilities** tab > **Add-Ins** > **Scripts and Add-Ins** (or press `Shift+S`)
+5. In the **Add-Ins** tab, find **PatternMaker** in the list.
 
-6. In the **Add-Ins** tab, find **PatternMaker** in the list.
+6. Click **Run** to start the add-in. Optionally check **Run on Startup** to load it automatically.
 
-7. Click **Run** to start the add-in. Optionally check **Run on Startup** to load it automatically.
-
-8. A **Pattern Maker** dropdown menu will appear in the **Solid > Create** toolbar panel.
+7. A **Pattern Maker** dropdown menu will appear in the **Solid > Create** toolbar panel.
 
 ---
 
@@ -223,6 +215,21 @@ COMPANY_NAME = 'ACME'  # Used as a prefix for internal UI element IDs
 
 - **Windows** and **macOS** (as specified in `PatternMaker.manifest`)
 - Fusion 360 (any current version with Python API support)
+
+---
+
+## Security Audit
+
+**Overall Risk: LOW.** The add-in runs inside Fusion 360's sandboxed Python environment with no network I/O, no external dependencies, and no unsafe code patterns.
+
+| Severity | Finding |
+|----------|---------|
+| Medium | `DEBUG = True` hardcoded in `config.py` — should be `False` for distribution |
+| Medium | Full stack traces displayed to users via `messageBox` on errors |
+| Medium | `innerHTML` XSS in template palette JS (unused code) |
+| Low | 14 bare `except: pass` clauses silently swallow all exceptions |
+| Low | No upper bound on pattern count — could freeze Fusion 360 with extreme inputs |
+| Info | No secrets, no network I/O, no eval/exec, no SQL, no external dependencies — very clean |
 
 ---
 

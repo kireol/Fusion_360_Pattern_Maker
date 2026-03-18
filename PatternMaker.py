@@ -1,4 +1,6 @@
-import adsk.core, adsk.fusion, math, traceback
+import adsk.core, adsk.fusion, math, traceback, os, sys
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+from translations import t, key, select_language
 
 
 _handlers = []
@@ -68,13 +70,13 @@ def execute_wall_engine(inputs):
 
     radius = inputs.itemById('radius').value; spacing = inputs.itemById('spacing').value; margin = inputs.itemById('margin').value
     slot_len = inputs.itemById('slot_len').value if inputs.itemById('slot_len').isVisible else 0
-    shape_type = inputs.itemById('shape_type').selectedItem.name
-    slot_horizontal = True if (inputs.itemById('slot_orient').isVisible and inputs.itemById('slot_orient').selectedItem.name == 'Horizontal') else False
+    shape_type = key(inputs.itemById('shape_type').selectedItem.name)
+    slot_horizontal = True if (inputs.itemById('slot_orient').isVisible and key(inputs.itemById('slot_orient').selectedItem.name) == 'Horizontal') else False
     rect_h_scale = inputs.itemById('rect_h_scale').valueOne if inputs.itemById('rect_h_scale').isVisible else 100
     is_interlock = inputs.itemById('interlock').value if inputs.itemById('interlock').isVisible else False
 
     if shape_type == 'Hexagon': grid_type = 'Staggered (Brick)'
-    else: grid_type = inputs.itemById('grid_type').selectedItem.name
+    else: grid_type = key(inputs.itemById('grid_type').selectedItem.name)
     is_staggered_grid = ('Staggered' in grid_type)
 
     def prepare_base(sketch):
@@ -93,7 +95,7 @@ def execute_wall_engine(inputs):
 
     r = radius
 
-    ui_shift = inputs.itemById('shift_dir').selectedItem.name if inputs.itemById('shift_dir').isVisible else 'Rows (Horizontal)'
+    ui_shift = key(inputs.itemById('shift_dir').selectedItem.name) if inputs.itemById('shift_dir').isVisible else 'Rows (Horizontal)'
     actual_shift_dir = ui_shift
 
     if shape_type == 'Hexagon':
@@ -147,12 +149,12 @@ class WallInputChanged(adsk.core.InputChangedEventHandler):
         try:
             inputs = args.inputs; changed_id = args.input.id
             _preview_flags['wall'] = (changed_id == 'preview_btn')
-            shape = inputs.itemById('shape_type').selectedItem.name
+            shape = key(inputs.itemById('shape_type').selectedItem.name)
             inputs.itemById('slot_len').isVisible = inputs.itemById('slot_orient').isVisible = (shape == 'Slot')
             inputs.itemById('rect_h_scale').isVisible = (shape == 'Rect / Square')
             grid = inputs.itemById('grid_type'); shift = inputs.itemById('shift_dir')
             if shape == 'Hexagon': grid.listItems.item(1).isSelected = True; grid.isEnabled = shift.isVisible = False
-            else: grid.isEnabled = True; shift.isVisible = ('Staggered' in grid.selectedItem.name)
+            else: grid.isEnabled = True; shift.isVisible = ('Staggered' in key(grid.selectedItem.name))
             inputs.itemById('interlock').isVisible = (shift.isVisible and shape != 'Hexagon')
         except: pass
 
@@ -160,24 +162,24 @@ class WallCreated(adsk.core.CommandCreatedEventHandler):
     def __init__(self): super().__init__()
     def notify(self, args):
         cmd = args.command; inputs = cmd.commandInputs
-        sel = inputs.addSelectionInput('face_select', 'Face', 'Planar')
+        sel = inputs.addSelectionInput('face_select', t('Face'), t('Planar'))
         sel.addSelectionFilter('PlanarFaces'); sel.setSelectionLimits(1,1)
-        shape = inputs.addDropDownCommandInput('shape_type', 'Shape', 1)
-        [shape.listItems.add(n, n=='Hexagon') for n in ['Hexagon', 'Circle', 'Rect / Square', 'Slot']]
-        grid = inputs.addDropDownCommandInput('grid_type', 'Grid Type', 1)
-        grid.listItems.add('Checkerboard', False); grid.listItems.add('Staggered (Brick)', True)
-        shift = inputs.addDropDownCommandInput('shift_dir', 'Shift Direction', 1)
-        shift.listItems.add('Rows (Horizontal)', True); shift.listItems.add('Columns (Vertical)', False); shift.isVisible = False
-        interlock = inputs.addBoolValueInput('interlock', 'Vertical Interlocking', True, '', False); interlock.isVisible = False
-        inputs.addValueInput('radius', 'Base Radius (R)', 'mm', adsk.core.ValueInput.createByReal(0.5))
-        inputs.addValueInput('spacing', 'Spacing (mm)', 'mm', adsk.core.ValueInput.createByReal(0.1))
-        inputs.addValueInput('margin', 'Margin (mm)', 'mm', adsk.core.ValueInput.createByReal(0.5))
-        rhs = inputs.addIntegerSliderCommandInput('rect_h_scale', 'Rectangle Height (%)', 10, 500, False)
+        shape = inputs.addDropDownCommandInput('shape_type', t('Shape'), 1)
+        [shape.listItems.add(t(n), n=='Hexagon') for n in ['Hexagon', 'Circle', 'Rect / Square', 'Slot']]
+        grid = inputs.addDropDownCommandInput('grid_type', t('Grid Type'), 1)
+        grid.listItems.add(t('Checkerboard'), False); grid.listItems.add(t('Staggered (Brick)'), True)
+        shift = inputs.addDropDownCommandInput('shift_dir', t('Shift Direction'), 1)
+        shift.listItems.add(t('Rows (Horizontal)'), True); shift.listItems.add(t('Columns (Vertical)'), False); shift.isVisible = False
+        interlock = inputs.addBoolValueInput('interlock', t('Vertical Interlocking'), True, '', False); interlock.isVisible = False
+        inputs.addValueInput('radius', t('Base Radius (R)'), 'mm', adsk.core.ValueInput.createByReal(0.5))
+        inputs.addValueInput('spacing', t('Spacing (mm)'), 'mm', adsk.core.ValueInput.createByReal(0.1))
+        inputs.addValueInput('margin', t('Margin (mm)'), 'mm', adsk.core.ValueInput.createByReal(0.5))
+        rhs = inputs.addIntegerSliderCommandInput('rect_h_scale', t('Rectangle Height (%)'), 10, 500, False)
         rhs.valueOne = 100; rhs.isVisible = False
-        sl = inputs.addValueInput('slot_len', 'Slot Length', 'mm', adsk.core.ValueInput.createByReal(1.0)); sl.isVisible = False
-        so = inputs.addDropDownCommandInput('slot_orient', 'Slot Orientation', 1)
-        so.listItems.add('Vertical', True); so.listItems.add('Horizontal', False); so.isVisible = False
-        preview_btn = inputs.addBoolValueInput('preview_btn', 'Generate / Refresh Preview', False, '', True)
+        sl = inputs.addValueInput('slot_len', t('Slot Length'), 'mm', adsk.core.ValueInput.createByReal(1.0)); sl.isVisible = False
+        so = inputs.addDropDownCommandInput('slot_orient', t('Slot Orientation'), 1)
+        so.listItems.add(t('Vertical'), True); so.listItems.add(t('Horizontal'), False); so.isVisible = False
+        preview_btn = inputs.addBoolValueInput('preview_btn', t('Generate / Refresh Preview'), False, '', True)
         preview_btn.isFullWidth = True
         onExec = WallExecute(); cmd.execute.add(onExec); _handlers.append(onExec)
         onPrev = WallPreview(); cmd.executePreview.add(onPrev); _handlers.append(onPrev)
@@ -195,12 +197,12 @@ def execute_cylinder_engine(inputs):
     cyl = face_sel.geometry; axis, R = cyl.axis, cyl.radius; C = 2 * math.pi * R
     density = inputs.itemById('density').valueOne; spacing = inputs.itemById('spacing').value; margin = inputs.itemById('margin').value
     slot_len = inputs.itemById('slot_len').value if inputs.itemById('slot_len').isVisible else 0
-    shape_type = inputs.itemById('shape_type').selectedItem.name
-    slot_horizontal = (inputs.itemById('slot_orient').selectedItem.name == 'Horizontal') if inputs.itemById('slot_orient').isVisible else False
+    shape_type = key(inputs.itemById('shape_type').selectedItem.name)
+    slot_horizontal = (key(inputs.itemById('slot_orient').selectedItem.name) == 'Horizontal') if inputs.itemById('slot_orient').isVisible else False
     rect_h_scale = inputs.itemById('rect_h_scale').valueOne if inputs.itemById('rect_h_scale').isVisible else 100
     is_interlock = inputs.itemById('interlock').value if inputs.itemById('interlock').isVisible else False
     if shape_type == 'Hexagon': grid_type, shift_dir = 'Staggered (Brick)', 'Rows (Horizontal)'
-    else: grid_type = inputs.itemById('grid_type').selectedItem.name; shift_dir = inputs.itemById('shift_dir').selectedItem.name if inputs.itemById('shift_dir').isVisible else 'Rows (Horizontal)'
+    else: grid_type = key(inputs.itemById('grid_type').selectedItem.name); shift_dir = key(inputs.itemById('shift_dir').selectedItem.name) if inputs.itemById('shift_dir').isVisible else 'Rows (Horizontal)'
     is_staggered_grid = ('Staggered' in grid_type)
     if is_staggered_grid and density % 2 != 0: density += 1
     dx = C / density
@@ -257,12 +259,12 @@ class CylInputChanged(adsk.core.InputChangedEventHandler):
         try:
             inputs = args.inputs; changed_id = args.input.id
             _preview_flags['cyl'] = (changed_id == 'preview_btn')
-            shape = inputs.itemById('shape_type').selectedItem.name
+            shape = key(inputs.itemById('shape_type').selectedItem.name)
             inputs.itemById('slot_len').isVisible = inputs.itemById('slot_orient').isVisible = (shape == 'Slot')
             inputs.itemById('rect_h_scale').isVisible = (shape == 'Rect / Square')
             grid = inputs.itemById('grid_type'); shift = inputs.itemById('shift_dir')
             if shape == 'Hexagon': grid.listItems.item(1).isSelected = True; grid.isEnabled = shift.isVisible = False
-            else: grid.isEnabled = True; shift.isVisible = ('Staggered' in grid.selectedItem.name)
+            else: grid.isEnabled = True; shift.isVisible = ('Staggered' in key(grid.selectedItem.name))
             inputs.itemById('interlock').isVisible = (shift.isVisible and shape != 'Hexagon')
         except: pass
 
@@ -270,23 +272,23 @@ class CylCreated(adsk.core.CommandCreatedEventHandler):
     def __init__(self): super().__init__()
     def notify(self, args):
         cmd = args.command; inputs = cmd.commandInputs
-        sel = inputs.addSelectionInput('face_select', 'Cylinder Face', 'Select')
+        sel = inputs.addSelectionInput('face_select', t('Cylinder Face'), t('Select'))
         sel.addSelectionFilter('Faces'); sel.setSelectionLimits(1,1)
-        shape = inputs.addDropDownCommandInput('shape_type', 'Shape', 1)
-        [shape.listItems.add(n, n=='Hexagon') for n in ['Hexagon', 'Circle', 'Rect / Square', 'Slot']]
-        grid = inputs.addDropDownCommandInput('grid_type', 'Grid Type', 1)
-        grid.listItems.add('Checkerboard', False); grid.listItems.add('Staggered (Brick)', True)
-        shift = inputs.addDropDownCommandInput('shift_dir', 'Shift Direction', 1)
-        shift.listItems.add('Rows (Horizontal)', True); shift.listItems.add('Columns (Vertical)', False); shift.isVisible = False
-        interlock = inputs.addBoolValueInput('interlock', 'Vertical Interlocking', True, '', False); interlock.isVisible = False
-        inputs.addIntegerSliderCommandInput('density', 'Density (Columns)', 2, 200, False).valueOne = 20
-        inputs.addValueInput('spacing', 'Spacing (mm)', 'mm', adsk.core.ValueInput.createByReal(0.1))
-        inputs.addValueInput('margin', 'Margin (mm)', 'mm', adsk.core.ValueInput.createByReal(0.5))
-        rhs = inputs.addIntegerSliderCommandInput('rect_h_scale', 'Rectangle Height (%)', 10, 500, False); rhs.valueOne = 100; rhs.isVisible = False
-        sl = inputs.addValueInput('slot_len', 'Slot Length', 'mm', adsk.core.ValueInput.createByReal(1.0)); sl.isVisible = False
-        so = inputs.addDropDownCommandInput('slot_orient', 'Slot Orientation', 1)
-        so.listItems.add('Vertical', True); so.listItems.add('Horizontal', False); so.isVisible = False
-        preview_btn = inputs.addBoolValueInput('preview_btn', 'Generate / Refresh Preview', False, '', True); preview_btn.isFullWidth = True
+        shape = inputs.addDropDownCommandInput('shape_type', t('Shape'), 1)
+        [shape.listItems.add(t(n), n=='Hexagon') for n in ['Hexagon', 'Circle', 'Rect / Square', 'Slot']]
+        grid = inputs.addDropDownCommandInput('grid_type', t('Grid Type'), 1)
+        grid.listItems.add(t('Checkerboard'), False); grid.listItems.add(t('Staggered (Brick)'), True)
+        shift = inputs.addDropDownCommandInput('shift_dir', t('Shift Direction'), 1)
+        shift.listItems.add(t('Rows (Horizontal)'), True); shift.listItems.add(t('Columns (Vertical)'), False); shift.isVisible = False
+        interlock = inputs.addBoolValueInput('interlock', t('Vertical Interlocking'), True, '', False); interlock.isVisible = False
+        inputs.addIntegerSliderCommandInput('density', t('Density (Columns)'), 2, 200, False).valueOne = 20
+        inputs.addValueInput('spacing', t('Spacing (mm)'), 'mm', adsk.core.ValueInput.createByReal(0.1))
+        inputs.addValueInput('margin', t('Margin (mm)'), 'mm', adsk.core.ValueInput.createByReal(0.5))
+        rhs = inputs.addIntegerSliderCommandInput('rect_h_scale', t('Rectangle Height (%)'), 10, 500, False); rhs.valueOne = 100; rhs.isVisible = False
+        sl = inputs.addValueInput('slot_len', t('Slot Length'), 'mm', adsk.core.ValueInput.createByReal(1.0)); sl.isVisible = False
+        so = inputs.addDropDownCommandInput('slot_orient', t('Slot Orientation'), 1)
+        so.listItems.add(t('Vertical'), True); so.listItems.add(t('Horizontal'), False); so.isVisible = False
+        preview_btn = inputs.addBoolValueInput('preview_btn', t('Generate / Refresh Preview'), False, '', True); preview_btn.isFullWidth = True
         onExec = CylExecute(); cmd.execute.add(onExec); _handlers.append(onExec)
         onPrev = CylPreview(); cmd.executePreview.add(onPrev); _handlers.append(onPrev)
         onChg = CylInputChanged(); cmd.inputChanged.add(onChg); _handlers.append(onChg)
@@ -314,15 +316,15 @@ def execute_multi_engine(inputs):
     v_mid_2d = sk.modelToSketchSpace(v_mid_3d)
     base_cx = v_mid_2d.y if is_rotated else v_mid_2d.x
     base_cy = v_mid_2d.x if is_rotated else v_mid_2d.y
-    shape_type = inputs.itemById('shape_type').selectedItem.name
-    grid_type = inputs.itemById('grid_type').selectedItem.name
-    pattern_align = inputs.itemById('pattern_align').selectedItem.name
+    shape_type = key(inputs.itemById('shape_type').selectedItem.name)
+    grid_type = key(inputs.itemById('grid_type').selectedItem.name)
+    pattern_align = key(inputs.itemById('pattern_align').selectedItem.name)
     is_staggered_grid = ('Staggered' in grid_type)
     density = inputs.itemById('density').valueOne
     if is_staggered_grid and density % 2 != 0: density += 1
     spacing = inputs.itemById('spacing').value; margin = inputs.itemById('margin').value
     slot_len = inputs.itemById('slot_len').value if inputs.itemById('slot_len').isVisible else 0
-    slot_horizontal = (inputs.itemById('slot_orient').selectedItem.name == 'Horizontal') if inputs.itemById('slot_orient').isVisible else False
+    slot_horizontal = (key(inputs.itemById('slot_orient').selectedItem.name) == 'Horizontal') if inputs.itemById('slot_orient').isVisible else False
     rect_h_scale = inputs.itemById('rect_h_scale').valueOne if inputs.itemById('rect_h_scale').isVisible else 100
     is_interlock = inputs.itemById('interlock').value if inputs.itemById('interlock').isVisible else False
     dx = C / density
@@ -378,37 +380,37 @@ class MultiInputChanged(adsk.core.InputChangedEventHandler):
         try:
             inputs = args.inputs; changed_id = args.input.id
             _preview_flags['multi'] = (changed_id == 'preview_btn')
-            shape = inputs.itemById('shape_type').selectedItem.name
+            shape = key(inputs.itemById('shape_type').selectedItem.name)
             inputs.itemById('slot_len').isVisible = inputs.itemById('slot_orient').isVisible = (shape == 'Slot')
             inputs.itemById('rect_h_scale').isVisible = (shape == 'Rect / Square')
             grid = inputs.itemById('grid_type')
             if shape == 'Hexagon': grid.listItems.item(1).isSelected = True; grid.isEnabled = False
             else: grid.isEnabled = True
-            inputs.itemById('interlock').isVisible = (('Staggered' in grid.selectedItem.name) and shape != 'Hexagon')
+            inputs.itemById('interlock').isVisible = (('Staggered' in key(grid.selectedItem.name)) and shape != 'Hexagon')
         except: pass
 
 class MultiCreated(adsk.core.CommandCreatedEventHandler):
     def __init__(self): super().__init__()
     def notify(self, args):
         cmd = args.command; inputs = cmd.commandInputs
-        v = inputs.addSelectionInput('v_edge', '1. Vertical Axis (H)', 'H'); v.addSelectionFilter('LinearEdges'); v.setSelectionLimits(1,1)
-        h = inputs.addSelectionInput('h_edge', '2. Horizontal Axis (X)', 'X'); h.addSelectionFilter('LinearEdges'); h.setSelectionLimits(1,1)
-        f = inputs.addSelectionInput('faces_select', '3. Perimeter Faces', 'Faces'); f.addSelectionFilter('Faces'); f.setSelectionLimits(1, 0)
-        align = inputs.addDropDownCommandInput('pattern_align', 'Alignment (Vertical Axis)', 1)
-        align.listItems.add('Symmetrical (Center)', True); align.listItems.add('From Axis (Start)', False)
-        shape = inputs.addDropDownCommandInput('shape_type', 'Shape', 1)
-        [shape.listItems.add(n, n=='Hexagon') for n in ['Hexagon', 'Circle', 'Rect / Square', 'Slot']]
-        grid = inputs.addDropDownCommandInput('grid_type', 'Grid Type', 1)
-        grid.listItems.add('Checkerboard', False); grid.listItems.add('Staggered (Brick)', True)
-        interlock = inputs.addBoolValueInput('interlock', 'Vertical Interlocking', True, '', False); interlock.isVisible = False
-        inputs.addIntegerSliderCommandInput('density', 'Density (Columns)', 2, 200, False).valueOne = 20
-        inputs.addValueInput('spacing', 'Spacing (mm)', 'mm', adsk.core.ValueInput.createByReal(0.1))
-        inputs.addValueInput('margin', 'Margin (mm)', 'mm', adsk.core.ValueInput.createByReal(0.5))
-        rhs = inputs.addIntegerSliderCommandInput('rect_h_scale', 'Rectangle Height (%)', 10, 500, False); rhs.valueOne = 100; rhs.isVisible = False
-        sl = inputs.addValueInput('slot_len', 'Slot Length', 'mm', adsk.core.ValueInput.createByReal(1.0)); sl.isVisible = False
-        so = inputs.addDropDownCommandInput('slot_orient', 'Slot Orientation', 1)
-        so.listItems.add('Vertical', True); so.listItems.add('Horizontal', False); so.isVisible = False
-        preview_btn = inputs.addBoolValueInput('preview_btn', 'Generate / Refresh Preview', False, '', True); preview_btn.isFullWidth = True
+        v = inputs.addSelectionInput('v_edge', t('1. Vertical Axis (H)'), 'H'); v.addSelectionFilter('LinearEdges'); v.setSelectionLimits(1,1)
+        h = inputs.addSelectionInput('h_edge', t('2. Horizontal Axis (X)'), 'X'); h.addSelectionFilter('LinearEdges'); h.setSelectionLimits(1,1)
+        f = inputs.addSelectionInput('faces_select', t('3. Perimeter Faces'), t('Faces')); f.addSelectionFilter('Faces'); f.setSelectionLimits(1, 0)
+        align = inputs.addDropDownCommandInput('pattern_align', t('Alignment (Vertical Axis)'), 1)
+        align.listItems.add(t('Symmetrical (Center)'), True); align.listItems.add(t('From Axis (Start)'), False)
+        shape = inputs.addDropDownCommandInput('shape_type', t('Shape'), 1)
+        [shape.listItems.add(t(n), n=='Hexagon') for n in ['Hexagon', 'Circle', 'Rect / Square', 'Slot']]
+        grid = inputs.addDropDownCommandInput('grid_type', t('Grid Type'), 1)
+        grid.listItems.add(t('Checkerboard'), False); grid.listItems.add(t('Staggered (Brick)'), True)
+        interlock = inputs.addBoolValueInput('interlock', t('Vertical Interlocking'), True, '', False); interlock.isVisible = False
+        inputs.addIntegerSliderCommandInput('density', t('Density (Columns)'), 2, 200, False).valueOne = 20
+        inputs.addValueInput('spacing', t('Spacing (mm)'), 'mm', adsk.core.ValueInput.createByReal(0.1))
+        inputs.addValueInput('margin', t('Margin (mm)'), 'mm', adsk.core.ValueInput.createByReal(0.5))
+        rhs = inputs.addIntegerSliderCommandInput('rect_h_scale', t('Rectangle Height (%)'), 10, 500, False); rhs.valueOne = 100; rhs.isVisible = False
+        sl = inputs.addValueInput('slot_len', t('Slot Length'), 'mm', adsk.core.ValueInput.createByReal(1.0)); sl.isVisible = False
+        so = inputs.addDropDownCommandInput('slot_orient', t('Slot Orientation'), 1)
+        so.listItems.add(t('Vertical'), True); so.listItems.add(t('Horizontal'), False); so.isVisible = False
+        preview_btn = inputs.addBoolValueInput('preview_btn', t('Generate / Refresh Preview'), False, '', True); preview_btn.isFullWidth = True
         onExec = MultiExecute(); cmd.execute.add(onExec); _handlers.append(onExec)
         onPrev = MultiPreview(); cmd.executePreview.add(onPrev); _handlers.append(onPrev)
         onChg = MultiInputChanged(); cmd.inputChanged.add(onChg); _handlers.append(onChg)
@@ -417,14 +419,12 @@ class MultiCreated(adsk.core.CommandCreatedEventHandler):
 # ==========================================
 # MAIN ADD-IN MECHANICS (UI REGISTRATION)
 # ==========================================
-import os # Make sure this is imported at the top of the file, alongside math and traceback!
-
 def run(context):
     try:
-        # GET THE ABSOLUTE PATH TO THE SCRIPT ON DISK
+        select_language(_ui)
+
         script_dir = os.path.dirname(os.path.realpath(__file__))
 
-        # BUILD ABSOLUTE PATHS TO ICONS
         res_main = os.path.join(script_dir, 'resources')
         res_wall = os.path.join(script_dir, 'resources', 'wall')
         res_cyl = os.path.join(script_dir, 'resources', 'cylinder')
@@ -432,30 +432,25 @@ def run(context):
 
         panel = _ui.allToolbarPanels.itemById('SolidCreatePanel')
 
-        # CLEANUP
         for cmd_id in ['PM_Wall_Cmd', 'PM_Cyl_Cmd', 'PM_Multi_Cmd']:
             cmd = _ui.commandDefinitions.itemById(cmd_id)
             if cmd: cmd.deleteMe()
         old_drop = panel.controls.itemById('PM_DropDown')
         if old_drop: old_drop.deleteMe()
 
-        # --- 1. MENU: WALL ---
-        cmdWall = _ui.commandDefinitions.addButtonDefinition('PM_Wall_Cmd', 'PM: Wall', 'Pattern on a single flat face.', res_wall)
-        cmdWall.tooltipDescription = 'A tool designed for working on flat surfaces.\n\nSelect a face and use the preview to fine-tune proportions. Great for ventilation grids and simple grates.'
+        cmdWall = _ui.commandDefinitions.addButtonDefinition('PM_Wall_Cmd', t('PM: Wall'), t('wall_tooltip'), res_wall)
+        cmdWall.tooltipDescription = t('wall_tooltip_desc')
         onWallCreated = WallCreated(); cmdWall.commandCreated.add(onWallCreated); _handlers.append(onWallCreated)
 
-        # --- 2. MENU: CYLINDER ---
-        cmdCyl = _ui.commandDefinitions.addButtonDefinition('PM_Cyl_Cmd', 'PM: Cylinder', 'Pattern wrapped around a cylinder circumference.', res_cyl)
-        cmdCyl.tooltipDescription = 'Generates a seamless pattern on cylindrical geometry.\n\nThe script automatically unwraps the cylinder surface and closes the pattern around its full circumference. Ideal for knurling and textures.'
+        cmdCyl = _ui.commandDefinitions.addButtonDefinition('PM_Cyl_Cmd', t('PM: Cylinder'), t('cyl_tooltip'), res_cyl)
+        cmdCyl.tooltipDescription = t('cyl_tooltip_desc')
         onCylCreated = CylCreated(); cmdCyl.commandCreated.add(onCylCreated); _handlers.append(onCylCreated)
 
-        # --- 3. MENU: MULTI ---
-        cmdMulti = _ui.commandDefinitions.addButtonDefinition('PM_Multi_Cmd', 'PM: Multi', 'Advanced pattern for multiple connected faces.', res_multi)
-        cmdMulti.tooltipDescription = 'Our most advanced engine. Maps multi-face patterns.\n\nRequires defining a Vertical Axis and a Horizontal Axis and supports multi-selection of any number of connected faces.'
+        cmdMulti = _ui.commandDefinitions.addButtonDefinition('PM_Multi_Cmd', t('PM: Multi'), t('multi_tooltip'), res_multi)
+        cmdMulti.tooltipDescription = t('multi_tooltip_desc')
         onMultiCreated = MultiCreated(); cmdMulti.commandCreated.add(onMultiCreated); _handlers.append(onMultiCreated)
 
-        # --- MAIN MENU (DROPDOWN) ---
-        dropControl = panel.controls.addDropDown('Pattern Maker', res_main, 'PM_DropDown')
+        dropControl = panel.controls.addDropDown(t('Pattern Maker'), res_main, 'PM_DropDown')
         dropControl.controls.addCommand(cmdWall)
         dropControl.controls.addCommand(cmdCyl)
         dropControl.controls.addCommand(cmdMulti)
